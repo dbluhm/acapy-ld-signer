@@ -100,10 +100,6 @@ class KMSEd25519Suite(LinkedDataSignature):
         """Verify the signature."""
         raise NotImplementedError("Verification not supported by KMS")
 
-    def _canonize(self, *, input, document_loader: DocumentLoaderMethod) -> str:
-        LOGGER.debug("KMS Suite canonizing input: %s", input)
-        return super()._canonize(input=input, document_loader=document_loader)
-
 
 class KmsSuiteProvider(ExternalSuiteProvider):
     """KMS Suite Provider."""

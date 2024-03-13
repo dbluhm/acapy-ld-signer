@@ -7,19 +7,9 @@ from aries_cloudagent.vc.vc_ld.external_suite import ExternalSuiteProvider
 from aries_cloudagent.wallet.default_verification_key_strategy import (
     BaseVerificationKeyStrategy,
 )
-from aries_cloudagent.wallet.did_method import DIDMethod, DIDMethods, HolderDefinedDid
-from aries_cloudagent.wallet.key_type import ED25519
 
 from .kms import KMSInterface, MiniKMS
 from .provider import KMSVerificationKeyStrategy, KmsSuiteProvider
-
-
-TEMP = DIDMethod(
-    name="temp",
-    key_types=[ED25519],
-    rotation=False,
-    holder_defined_did=HolderDefinedDid.REQUIRED,
-)
 
 
 async def setup(context: InjectionContext):
@@ -36,6 +26,3 @@ async def setup(context: InjectionContext):
 
     key_strat = KMSVerificationKeyStrategy()
     context.injector.bind_instance(BaseVerificationKeyStrategy, key_strat)
-
-    methods = context.injector.inject(DIDMethods)
-    methods.register(TEMP)
