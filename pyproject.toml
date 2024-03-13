@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "acapy-ld-signer"
+version = "0.1.0"
+description = "Demonstrate signing LDP-VC creds with external suite"
+authors = ["Daniel Bluhm <dbluhm@pm.me>"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+
+[tool.poetry.group.acapy.dependencies]
+aries-cloudagent = {git = "https://github.com/sicpa-dlab/aries-cloudagent-python", rev = "505263411782c488f88952c97d857d4bd2772661"}
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.2.0"
+ruff = "^0.3.2"
+pre-commit = "^3.6.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = ["E", "F", "C", "D"]
+
+ignore = [
+    # Google Python Doc Style
+    "D203", "D204", "D213", "D215", "D400", "D401", "D404", "D406", "D407",
+    "D408", "D409", "D413",
+]
+
+line-length = 90
