@@ -2,6 +2,11 @@
 
 A quick demonstration of using an external service for signing JSON-LD creds.
 
+The External Provider component is added to ACA-Py in [PR #2835](https://github.com/hyperledger/aries-cloudagent-python/pull/2835).
+
+The KMS Service used by this demo can be found here: [dbluhm/mini-kms](https://github.com/dbluhm/mini-kms).
+
+
 ## Run the Demo
 
 ```sh
@@ -23,6 +28,7 @@ Logs from the ACA-Py instance may also be of interest:
 ```sh
 docker-compose logs issuer
 ```
+
 
 ## Points of Interest
 
