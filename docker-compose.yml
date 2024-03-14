@@ -35,8 +35,18 @@ services:
       kms:
         condition: service_started
 
-
   kms:
-    image: mini-kms
+    image: ghcr.io/dbluhm/mini-kms:v0.1.0
     ports:
       - "8080:80"
+
+  demo:
+    image: acapy-ld-signer-demo-runner
+    build:
+      context: .
+      dockerfile: ./demo/Dockerfile
+    environment:
+      AGENT: http://issuer:3001
+    depends_on:
+      issuer:
+        condition: service_healthy
