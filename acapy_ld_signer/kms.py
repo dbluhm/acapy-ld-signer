@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Optional, Union
 
 from aiohttp import ClientSession
 from aries_cloudagent.wallet.util import b64_to_bytes, bytes_to_b64
@@ -38,12 +38,46 @@ class KeyResult:
         )
 
 
+@dataclass
+class AssociateResult:
+    """Key association result."""
+
+    kid: str
+    wallet_id: str
+    alias: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "AssociateResult":
+        """Create an AssociateResult from a dictionary."""
+        return cls(
+            kid=data["kid"],
+            wallet_id=data["kid"],
+            alias=data["alias"],
+        )
+
+
 class KMSInterface(ABC):
     """KMS Interface."""
+
+    OMITTED = object()
+
+    @abstractmethod
+    def with_profile(
+        self, profile: Union[str, None, object] = OMITTED
+    ) -> "KMSInterface":
+        """Create a new instance with profile."""
 
     @abstractmethod
     async def generate_key(self, alg: KeyAlg) -> KeyResult:
         """Generate a new key pair."""
+
+    @abstractmethod
+    async def associate_key(self, kid: str, alias: str) -> AssociateResult:
+        """Associate a key with additional identifiers."""
+
+    @abstractmethod
+    async def get_key_by_alias(self, alias: str) -> KeyResult:
+        """Retrieve a key by identifiers."""
 
     @abstractmethod
     async def sign(self, kid: str, data: bytes) -> bytes:
@@ -53,13 +87,31 @@ class KMSInterface(ABC):
 class MiniKMS(KMSInterface):
     """Minimal KMS for testing."""
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, profile: Optional[str] = None):
         """Initialize the MiniKMS."""
+        self.base_url = base_url
         self.client = ClientSession(base_url=base_url)
+        self.profile = profile
+
+    def with_profile(
+        self, profile: Union[str, None, object] = KMSInterface.OMITTED
+    ) -> "MiniKMS":
+        """Create a new instance with profile."""
+        if profile is not KMSInterface.OMITTED:
+            assert isinstance(profile, str) or profile is None
+            return MiniKMS(self.base_url, profile)
+
+        return self
+
+    def headers(self):
+        """Return headers."""
+        return {"X-Profile": self.profile or "default"}
 
     async def generate_key(self, alg: KeyAlg) -> KeyResult:
         """Generate a new key pair."""
-        async with self.client.post("/key/generate", json={"alg": alg}) as resp:
+        async with self.client.post(
+            "/key/generate", headers=self.headers(), json={"alg": alg}
+        ) as resp:
             if not resp.ok:
                 raise ValueError(f"Error generating key: {resp.status} {resp.reason}")
 
@@ -67,11 +119,38 @@ class MiniKMS(KMSInterface):
 
         return KeyResult.from_dict(body)
 
+    async def associate_key(self, kid: str, alias: str) -> AssociateResult:
+        """Associate a key with additional identifiers."""
+        async with self.client.post(
+            f"/key/{kid}/associate", headers=self.headers(), json={"alias": alias}
+        ) as resp:
+            if not resp.ok:
+                raise ValueError(f"Error associating key: {resp.status} {resp.reason}")
+
+            body = await resp.json()
+            return AssociateResult.from_dict(body)
+
+    async def get_key_by_alias(self, alias: str) -> KeyResult:
+        """Retrieve a key by identifiers."""
+        async with self.client.get(
+            "/key", headers=self.headers(), params={"alias": alias}
+        ) as resp:
+            if not resp.ok:
+                message = f"{resp.status} {resp.reason}"
+                if "json" in resp.headers.getone("Content-Type"):
+                    body = await resp.json()
+                    message = f"{message}; {body}"
+
+                raise ValueError(f"Error retrieving key: {message}")
+
+            body = await resp.json()
+            return KeyResult.from_dict(body)
+
     async def sign(self, kid: str, data: bytes) -> bytes:
         """Sign a message with the private key."""
         data_enc = bytes_to_b64(data, urlsafe=True, pad=True)
         async with self.client.post(
-            "/sign", json={"kid": kid, "data": data_enc}
+            "/sign", headers=self.headers(), json={"kid": kid, "data": data_enc}
         ) as resp:
             if not resp.ok:
                 raise ValueError(f"Error signing message: {resp.status} {resp.reason}")

@@ -62,10 +62,9 @@ class KMSEd25519Suite(LinkedDataSignature):
     def __init__(
         self,
         client: KMSInterface,
-        kid: str,
+        verification_method: str,
         *,
         proof: Optional[dict] = None,
-        verification_method: Optional[str] = None,
         date: Optional[datetime] = None,
     ):
         """Initialize the suite."""
@@ -73,17 +72,17 @@ class KMSEd25519Suite(LinkedDataSignature):
             proof=proof, verification_method=verification_method, date=date
         )
         LOGGER.debug(
-            "KMS Suite initialized with kid: %s, proof: %s, vm: %s",
-            kid,
+            "KMS Suite initialized with: proof: %s, vm: %s",
             proof,
             verification_method,
         )
         self.client = client
-        self.kid = kid
+        self.verification_method = verification_method
 
     async def sign(self, *, verify_data: bytes, proof: dict) -> dict:
         """Sign the value."""
-        sig = await self.client.sign(self.kid, verify_data)
+        key = await self.client.get_key_by_alias(self.verification_method)
+        sig = await self.client.sign(key.kid, verify_data)
         proof["proofValue"] = multibase.encode(sig, "base58btc")
         LOGGER.debug("KMS Suite signed proof: %s", proof)
         return proof
@@ -120,9 +119,14 @@ class KmsSuiteProvider(ExternalSuiteProvider):
         if proof_type != "Ed25519Signature2020":
             raise ExternalSuiteNotFoundError("Unsupported proof type: " + proof_type)
 
+        wallet_id = profile.settings.get_str("wallet.id")
+        if wallet_id:
+            client = self.client.with_profile(wallet_id)
+        else:
+            client = self.client
+
         return KMSEd25519Suite(
-            self.client,
-            kid=verification_method.rsplit("#", 1)[1],
+            client,
             verification_method=verification_method,
             proof=proof,
         )

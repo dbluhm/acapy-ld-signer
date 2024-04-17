@@ -37,7 +37,7 @@ services:
         condition: service_started
 
   kms:
-    image: ghcr.io/dbluhm/mini-kms:v0.1.0
+    image: ghcr.io/dbluhm/mini-kms:0.1.2
     platform: linux/amd64
     ports:
       - "8080:80"

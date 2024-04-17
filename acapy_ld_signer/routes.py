@@ -24,6 +24,9 @@ async def create_did(request: web.Request):
     """Create DID."""
     context: AdminRequestContext = request["context"]
     client = context.inject(KMSInterface)
+    wallet_id = context.settings.get_str("wallet.id")
+    if wallet_id:
+        client = client.with_profile(wallet_id)
 
     key = await client.generate_key("ed25519")
     multikey = multibase.encode(
@@ -36,16 +39,19 @@ async def create_did(request: web.Request):
         ],
         "verificationMethod": [
             {
-                "id": "#" + key.kid,
+                "id": "#key-1",
                 "type": "Multikey",
                 "publicKeyMultibase": multikey,
             }
         ],
-        "authentication": ["#" + key.kid],
-        "assertionMethod": ["#" + key.kid],
+        "authentication": ["#key-1"],
+        "assertionMethod": ["#key-1"],
     }
     did = encode(doc)
     info = DIDInfo(did=did, verkey=key.b58, metadata={}, method=PEER4, key_type=ED25519)
+
+    # Associate key
+    await client.associate_key(key.kid, f"{did}#key-1")
 
     try:
         async with context.session() as session:
