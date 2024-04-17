@@ -8,7 +8,7 @@ from aries_cloudagent.wallet.default_verification_key_strategy import (
     BaseVerificationKeyStrategy,
 )
 
-from .kms import KMSInterface, MiniKMS
+from .kms import MiniKMS
 from .provider import KMSVerificationKeyStrategy, KmsSuiteProvider
 
 
@@ -19,7 +19,7 @@ async def setup(context: InjectionContext):
         raise ValueError("KMS_BASE_URL not set")
 
     kms_client = MiniKMS(base_url=KMS_BASE_URL)
-    context.injector.bind_instance(KMSInterface, kms_client)
+    context.injector.bind_instance(MiniKMS, kms_client)
 
     suite = KmsSuiteProvider(kms_client)
     context.injector.bind_instance(ExternalSuiteProvider, suite)

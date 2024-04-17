@@ -1,6 +1,5 @@
 """KMS Interface."""
 
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Literal, Optional, Union
 
@@ -56,36 +55,10 @@ class AssociateResult:
         )
 
 
-class KMSInterface(ABC):
-    """KMS Interface."""
+class MiniKMS:
+    """Minimal KMS for testing."""
 
     OMITTED = object()
-
-    @abstractmethod
-    def with_profile(
-        self, profile: Union[str, None, object] = OMITTED
-    ) -> "KMSInterface":
-        """Create a new instance with profile."""
-
-    @abstractmethod
-    async def generate_key(self, alg: KeyAlg) -> KeyResult:
-        """Generate a new key pair."""
-
-    @abstractmethod
-    async def associate_key(self, kid: str, alias: str) -> AssociateResult:
-        """Associate a key with additional identifiers."""
-
-    @abstractmethod
-    async def get_key_by_alias(self, alias: str) -> KeyResult:
-        """Retrieve a key by identifiers."""
-
-    @abstractmethod
-    async def sign(self, kid: str, data: bytes) -> bytes:
-        """Sign a message with the private key."""
-
-
-class MiniKMS(KMSInterface):
-    """Minimal KMS for testing."""
 
     def __init__(self, base_url: str, profile: Optional[str] = None):
         """Initialize the MiniKMS."""
@@ -93,11 +66,29 @@ class MiniKMS(KMSInterface):
         self.client = ClientSession(base_url=base_url)
         self.profile = profile
 
-    def with_profile(
-        self, profile: Union[str, None, object] = KMSInterface.OMITTED
-    ) -> "MiniKMS":
+    async def create_profile_if_not_exists(self, profile: str):
+        """Create profile if not exists."""
+        async with self.client.post("/profile", json={"name": profile}) as resp:
+            if not resp.ok:
+                if resp.status == 400 and "json" in resp.headers.getone("Content-Type"):
+                    body = await resp.json()
+                    if "already exists" in body.get("detail"):
+                        pass
+                    else:
+                        message = f"{resp.status}: {resp.reason}; {body}"
+                        raise ValueError(f"Error creating profile: {message}")
+                else:
+                    raise ValueError(
+                        f"Error creating profile: {resp.status}: {resp.reason}"
+                    )
+            else:
+                body = await resp.json()
+                if body.get("success") is not True:
+                    raise ValueError("Unknown error while creating profile")
+
+    def with_profile(self, profile: Union[str, None, object] = OMITTED) -> "MiniKMS":
         """Create a new instance with profile."""
-        if profile is not KMSInterface.OMITTED:
+        if profile is not self.OMITTED:
             assert isinstance(profile, str) or profile is None
             return MiniKMS(self.base_url, profile)
 

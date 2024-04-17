@@ -15,7 +15,7 @@ from aries_cloudagent.wallet.base import BaseWallet
 from aries_cloudagent.wallet.util import b58_to_bytes
 from did_peer_4 import encode
 
-from .kms import KMSInterface
+from .kms import MiniKMS
 
 
 @docs(tags=["external-ld-signer"], summary="Create a DID using the KMS")
@@ -23,9 +23,10 @@ from .kms import KMSInterface
 async def create_did(request: web.Request):
     """Create DID."""
     context: AdminRequestContext = request["context"]
-    client = context.inject(KMSInterface)
+    client = context.inject(MiniKMS)
     wallet_id = context.settings.get_str("wallet.id")
     if wallet_id:
+        await client.create_profile_if_not_exists(wallet_id)
         client = client.with_profile(wallet_id)
 
     key = await client.generate_key("ed25519")

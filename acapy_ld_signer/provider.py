@@ -23,7 +23,7 @@ from aries_cloudagent.wallet.did_info import DIDInfo
 from aries_cloudagent.wallet.key_type import KeyType
 from did_peer_4 import resolve
 
-from acapy_ld_signer.kms import KMSInterface
+from acapy_ld_signer.kms import MiniKMS
 
 
 LOGGER = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class KMSEd25519Suite(LinkedDataSignature):
 
     def __init__(
         self,
-        client: KMSInterface,
+        client: MiniKMS,
         verification_method: str,
         *,
         proof: Optional[dict] = None,
@@ -103,7 +103,7 @@ class KMSEd25519Suite(LinkedDataSignature):
 class KmsSuiteProvider(ExternalSuiteProvider):
     """KMS Suite Provider."""
 
-    def __init__(self, client: KMSInterface):
+    def __init__(self, client: MiniKMS):
         """Initialize the suite provider."""
         self.client = client
 
